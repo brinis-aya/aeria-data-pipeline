@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "30 6 * * *"   # daily smoke run on yesterday's open data
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: aeria
+          POSTGRES_USER: aeria
+          POSTGRES_PASSWORD: aeria
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U aeria" --health-interval 5s --health-retries 10
+    env:
+      DW_TEST_URL: postgresql://aeria:aeria@localhost:5432/aeria
+      DW_URL: postgresql://aeria:aeria@localhost:5432/aeria
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Unit and integration tests
+        run: pytest -v
+      - name: End-to-end run on the last 2 days of real open data
+        run: |
+          aeria-pipeline run --sources lcsqa \
+            --start "$(date -d '3 days ago' +%F)" --end "$(date -d 'yesterday' +%F)"
+          psql postgresql://aeria:aeria@localhost:5432/aeria -c \
+            "select status, rows_loaded, rows_usable from dw.etl_run order by run_id desc limit 1"

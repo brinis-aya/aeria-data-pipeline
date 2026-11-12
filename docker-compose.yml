@@ -1,0 +1,22 @@
+# Standalone warehouse for the pipeline. If module 1 (aeria-iot-sensors) is already running,
+# its PostgreSQL on 127.0.0.1:5440 can be used instead (the dw schema lives next to the raw tables).
+name: aeria-dw
+
+services:
+  warehouse:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: aeria
+      POSTGRES_USER: aeria
+      POSTGRES_PASSWORD: aeria
+    ports:
+      - "127.0.0.1:${DW_PORT:-5441}:5432"
+    volumes:
+      - dwdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aeria"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  dwdata:
