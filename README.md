@@ -88,11 +88,22 @@ exceedances, sensor vs reference bias, run history).
 
 ## Run it
 
+Requirements: Python 3.11+ (CI: 3.12), Docker for the warehouse.
+
+**Quick test, no database:**
+
 ```bash
 python -m venv .venv && . .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
+pytest                                            # 35 tests (the warehouse one is skipped without a DB)
+aeria-pipeline run --sources lcsqa --start 2026-10-01 --end 2026-10-07 --no-load   # real open data -> out/*.csv
+```
+
+**Full run with the warehouse:**
+
+```bash
 docker compose up -d                              # PostgreSQL on 127.0.0.1:5441
-export DW_URL=postgresql://aeria:aeria@127.0.0.1:5441/aeria
+export DW_URL=postgresql://aeria:aeria@127.0.0.1:5441/aeria     # Windows PowerShell: $env:DW_URL="..."
 
 aeria-pipeline run --sources lcsqa --start 2026-10-01 --end 2026-10-31
 python scripts/make_figures.py                    # regenerates docs/figures/
